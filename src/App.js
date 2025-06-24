@@ -34,6 +34,7 @@ const App = () => {
         .getHours()
         .toString()
         .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      const currentDateString = now.toISOString().split("T")[0];
 
       alarms.forEach((alarm) => {
         if (
@@ -41,13 +42,51 @@ const App = () => {
           alarm.time === currentTimeString &&
           now.getSeconds() === 0
         ) {
-          Alert.alert("闹钟提醒", `闹钟响了！${alarm.label}`);
-          // 闹钟响后可以选择关闭或延迟
-          setAlarms((prevAlarms) =>
-            prevAlarms.map((a) =>
-              a.id === alarm.id ? { ...a, isActive: false } : a
-            )
-          );
+          let shouldTrigger = false;
+
+          if (alarm.isSpecificDate && alarm.specificDate) {
+            // 指定日期闹钟：只在指定日期触发
+            if (alarm.specificDate === currentDateString) {
+              shouldTrigger = true;
+              // 指定日期闹钟触发后自动删除
+              setAlarms((prevAlarms) =>
+                prevAlarms.filter((a) => a.id !== alarm.id)
+              );
+            }
+          } else if (alarm.repeat && alarm.repeat.length > 0) {
+            // 重复闹钟：检查是否在重复日期中
+            const weekDayNames = [
+              "周日",
+              "周一",
+              "周二",
+              "周三",
+              "周四",
+              "周五",
+              "周六",
+            ];
+            const currentWeekDay = weekDayNames[now.getDay()];
+
+            // 检查今天是否被跳过
+            const skippedDates = alarm.skippedDates || [];
+            const isTodaySkipped = skippedDates.includes(currentDateString);
+
+            if (alarm.repeat.includes(currentWeekDay) && !isTodaySkipped) {
+              shouldTrigger = true;
+              // 重复闹钟不删除，只是关闭
+              setAlarms((prevAlarms) =>
+                prevAlarms.map((a) =>
+                  a.id === alarm.id ? { ...a, isActive: false } : a
+                )
+              );
+            }
+          }
+
+          if (shouldTrigger) {
+            const alertMessage = alarm.isSpecificDate
+              ? `指定日期闹钟响了！${alarm.label}`
+              : `闹钟响了！${alarm.label}`;
+            Alert.alert("闹钟提醒", alertMessage);
+          }
         }
       });
     };
@@ -77,6 +116,40 @@ const App = () => {
     setAlarms(alarms.filter((alarm) => alarm.id !== id));
   };
 
+  const skipTodayAlarm = (id) => {
+    const today = new Date().toISOString().split("T")[0];
+    setAlarms(
+      alarms.map((alarm) => {
+        if (alarm.id === id) {
+          const skippedDates = alarm.skippedDates || [];
+          if (!skippedDates.includes(today)) {
+            return {
+              ...alarm,
+              skippedDates: [...skippedDates, today],
+            };
+          }
+        }
+        return alarm;
+      })
+    );
+  };
+
+  const cancelSkipToday = (id) => {
+    const today = new Date().toISOString().split("T")[0];
+    setAlarms(
+      alarms.map((alarm) => {
+        if (alarm.id === id) {
+          const skippedDates = alarm.skippedDates || [];
+          return {
+            ...alarm,
+            skippedDates: skippedDates.filter((date) => date !== today),
+          };
+        }
+        return alarm;
+      })
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
@@ -100,6 +173,8 @@ const App = () => {
         alarms={alarms}
         onToggle={toggleAlarm}
         onDelete={deleteAlarm}
+        onSkipToday={skipTodayAlarm}
+        onCancelSkipToday={cancelSkipToday}
       />
 
       {/* 添加闹钟模态框 */}

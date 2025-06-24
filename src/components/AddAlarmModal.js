@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ const AddAlarmModal = ({ visible, onClose, onAdd }) => {
   const [time, setTime] = useState("");
   const [label, setLabel] = useState("");
   const [selectedDays, setSelectedDays] = useState([]);
+  const [isSpecificDate, setIsSpecificDate] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const dateInputRef = useRef(null);
 
   const weekDays = [
     { key: "周一", value: "monday" },
@@ -43,6 +46,62 @@ const AddAlarmModal = ({ visible, onClose, onAdd }) => {
     }
   };
 
+  const toggleAllDays = () => {
+    const allDayKeys = weekDays.map((day) => day.key);
+    if (selectedDays.length === weekDays.length) {
+      // 如果已经选择了所有天，则取消选择
+      setSelectedDays([]);
+    } else {
+      // 否则选择所有天
+      setSelectedDays(allDayKeys);
+    }
+  };
+
+  const handleSpecificDateMode = () => {
+    setIsSpecificDate(true);
+    setSelectedDays([]);
+    // 设置默认日期为今天
+    const today = new Date();
+    const formattedDate = today.toISOString().split("T")[0];
+    setSelectedDate(formattedDate);
+  };
+
+  const handleRepeatMode = () => {
+    setIsSpecificDate(false);
+    setSelectedDate("");
+  };
+
+  const handleDateChange = (date) => {
+    const today = new Date();
+    const selectedDateObj = new Date(date);
+
+    // 不允许选择早于今天的日期
+    if (selectedDateObj >= today.setHours(0, 0, 0, 0)) {
+      setSelectedDate(date);
+    } else {
+      Alert.alert("错误", "不能选择早于今天的日期");
+    }
+  };
+
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const weekDayNames = [
+      "周日",
+      "周一",
+      "周二",
+      "周三",
+      "周四",
+      "周五",
+      "周六",
+    ];
+    const weekDay = weekDayNames[date.getDay()];
+    return `${year}年${month}月${day}日 ${weekDay}`;
+  };
+
   const validateTime = (timeString) => {
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     return timeRegex.test(timeString);
@@ -59,10 +118,23 @@ const AddAlarmModal = ({ visible, onClose, onAdd }) => {
       return;
     }
 
+    // 验证重复或指定日期设置
+    if (!isSpecificDate && selectedDays.length === 0) {
+      Alert.alert("错误", "请选择重复日期或指定具体日期");
+      return;
+    }
+
+    if (isSpecificDate && !selectedDate) {
+      Alert.alert("错误", "请选择具体日期");
+      return;
+    }
+
     const alarmData = {
       time: time,
       label: label.trim() || "闹钟",
-      repeat: selectedDays,
+      repeat: isSpecificDate ? [] : selectedDays,
+      specificDate: isSpecificDate ? selectedDate : null,
+      isSpecificDate: isSpecificDate,
     };
 
     onAdd(alarmData);
@@ -73,6 +145,8 @@ const AddAlarmModal = ({ visible, onClose, onAdd }) => {
     setTime("");
     setLabel("");
     setSelectedDays([]);
+    setIsSpecificDate(false);
+    setSelectedDate("");
   };
 
   const handleClose = () => {
@@ -125,30 +199,138 @@ const AddAlarmModal = ({ visible, onClose, onAdd }) => {
 
             {/* 重复设置 */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>重复</Text>
-              <View style={styles.daysContainer}>
-                {weekDays.map((day) => (
-                  <TouchableOpacity
-                    key={day.value}
+              <Text style={styles.sectionTitle}>提醒方式</Text>
+
+              {/* 选择模式按钮 */}
+              <View style={styles.modeContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.modeButton,
+                    !isSpecificDate && styles.modeButtonSelected,
+                  ]}
+                  onPress={handleRepeatMode}
+                >
+                  <Text
                     style={[
-                      styles.dayButton,
-                      selectedDays.includes(day.key) &&
-                        styles.dayButtonSelected,
+                      styles.modeButtonText,
+                      !isSpecificDate && styles.modeButtonTextSelected,
                     ]}
-                    onPress={() => toggleDay(day.key)}
+                  >
+                    重复
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modeButton,
+                    isSpecificDate && styles.modeButtonSelected,
+                  ]}
+                  onPress={handleSpecificDateMode}
+                >
+                  <Text
+                    style={[
+                      styles.modeButtonText,
+                      isSpecificDate && styles.modeButtonTextSelected,
+                    ]}
+                  >
+                    指定日期
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 重复模式界面 */}
+              {!isSpecificDate && (
+                <>
+                  {/* 每天按钮 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.everyDayButton,
+                      selectedDays.length === weekDays.length &&
+                        styles.everyDayButtonSelected,
+                    ]}
+                    onPress={toggleAllDays}
                   >
                     <Text
                       style={[
-                        styles.dayButtonText,
-                        selectedDays.includes(day.key) &&
-                          styles.dayButtonTextSelected,
+                        styles.everyDayButtonText,
+                        selectedDays.length === weekDays.length &&
+                          styles.everyDayButtonTextSelected,
                       ]}
                     >
-                      {day.key}
+                      每天
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+
+                  <View style={styles.daysContainer}>
+                    {weekDays.map((day) => (
+                      <TouchableOpacity
+                        key={day.value}
+                        style={[
+                          styles.dayButton,
+                          selectedDays.includes(day.key) &&
+                            styles.dayButtonSelected,
+                        ]}
+                        onPress={() => toggleDay(day.key)}
+                      >
+                        <Text
+                          style={[
+                            styles.dayButtonText,
+                            selectedDays.includes(day.key) &&
+                              styles.dayButtonTextSelected,
+                          ]}
+                        >
+                          {day.key}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {/* 指定日期模式界面 */}
+              {isSpecificDate && (
+                <View style={styles.datePickerContainer}>
+                  <Text style={styles.dateLabel}>选择日期</Text>
+
+                  {/* 隐藏的日期输入 */}
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    style={{ display: "none" }}
+                  />
+
+                  {/* 可点击的日期显示区域 */}
+                  <TouchableOpacity
+                    style={styles.dateSelectButton}
+                    onPress={() => {
+                      if (dateInputRef.current) {
+                        dateInputRef.current.showPicker
+                          ? dateInputRef.current.showPicker()
+                          : dateInputRef.current.click();
+                      }
+                    }}
+                  >
+                    <View style={styles.dateDisplayContainer}>
+                      {selectedDate ? (
+                        <>
+                          <Text style={styles.selectedDateMain}>
+                            {formatDateForDisplay(selectedDate)}
+                          </Text>
+                          <Text style={styles.dateHint}>点击修改日期</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.datePrompt}>点击选择日期</Text>
+                          <Text style={styles.dateHint}>📅</Text>
+                        </>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </ScrollView>
 
@@ -229,6 +411,96 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#3282b8",
+  },
+  everyDayButton: {
+    backgroundColor: "#1a1a2e",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: "#e74c3c",
+    alignItems: "center",
+    alignSelf: "center",
+  },
+  everyDayButtonSelected: {
+    backgroundColor: "#e74c3c",
+  },
+  everyDayButtonText: {
+    color: "#e74c3c",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  everyDayButtonTextSelected: {
+    color: "#ffffff",
+  },
+  modeContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: "#1a1a2e",
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#3282b8",
+  },
+  modeButtonSelected: {
+    backgroundColor: "#3282b8",
+  },
+  modeButtonText: {
+    color: "#bbbbbb",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  modeButtonTextSelected: {
+    color: "#ffffff",
+  },
+  datePickerContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  dateLabel: {
+    fontSize: 16,
+    color: "#ffffff",
+    marginBottom: 15,
+    fontWeight: "bold",
+  },
+  dateSelectButton: {
+    backgroundColor: "#1a1a2e",
+    borderWidth: 2,
+    borderColor: "#3282b8",
+    borderRadius: 12,
+    padding: 20,
+    width: "90%",
+    alignItems: "center",
+    minHeight: 80,
+    justifyContent: "center",
+  },
+  dateDisplayContainer: {
+    alignItems: "center",
+  },
+  selectedDateMain: {
+    fontSize: 18,
+    color: "#ffffff",
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  datePrompt: {
+    fontSize: 18,
+    color: "#3282b8",
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  dateHint: {
+    fontSize: 14,
+    color: "#bbbbbb",
+    textAlign: "center",
   },
   daysContainer: {
     flexDirection: "row",
