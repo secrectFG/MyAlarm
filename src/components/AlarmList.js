@@ -75,8 +75,8 @@ const AlarmItem = ({
         <Switch
           value={alarm.isActive}
           onValueChange={() => onToggle(alarm.id)}
-          trackColor={{ false: "#767577", true: "#0f4c75" }}
-          thumbColor={alarm.isActive ? "#3282b8" : "#f4f3f4"}
+          trackColor={{ false: "#CCCCCC", true: "#FFD54F" }}
+          thumbColor={alarm.isActive ? "#FF9800" : "#f4f3f4"}
         />
 
         {/* 今日跳过按钮 - 只对重复闹钟显示 */}
@@ -158,16 +158,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
+    backgroundColor: "#FFF8E1",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
+    backgroundColor: "#FFF8E1",
   },
   emptyText: {
     fontSize: 18,
-    color: "#bbbbbb",
+    color: "#666666",
     textAlign: "center",
     marginBottom: 10,
   },
@@ -178,11 +180,13 @@ const styles = StyleSheet.create({
   },
   alarmItem: {
     flexDirection: "row",
-    backgroundColor: "#16213e",
+    backgroundColor: "#FFECB3",
     padding: 20,
     marginVertical: 5,
     borderRadius: 10,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FFD54F",
   },
   alarmInfo: {
     flex: 1,
@@ -190,22 +194,22 @@ const styles = StyleSheet.create({
   alarmTime: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: "#333333",
     fontFamily: "monospace",
   },
   alarmLabel: {
     fontSize: 16,
-    color: "#bbbbbb",
+    color: "#555555",
     marginTop: 5,
   },
   alarmRepeat: {
     fontSize: 12,
-    color: "#888888",
+    color: "#777777",
     marginTop: 3,
   },
   skipStatus: {
     fontSize: 11,
-    color: "#f39c12",
+    color: "#FF9800",
     marginTop: 2,
     fontWeight: "bold",
   },
@@ -213,7 +217,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   skipButton: {
-    backgroundColor: "#f39c12",
+    backgroundColor: "#FF9800",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -222,7 +226,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   skipButtonActive: {
-    backgroundColor: "#e67e22",
+    backgroundColor: "#F57C00",
   },
   skipButtonText: {
     color: "#ffffff",
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   deleteButton: {
-    backgroundColor: "#e74c3c",
+    backgroundColor: "#E53935",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 5,

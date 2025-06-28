@@ -1,0 +1,66 @@
+apply plugin: "com.android.application"
+apply plugin: "com.facebook.react"
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    namespace "com.myalarm"
+
+    defaultConfig {
+        applicationId "com.myalarm"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            // This is a dummy signing config for release builds.
+            // You should configure your own signing config for release builds.
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Causes the wrong APK to be installed by an IDE build > Run
+            signingConfig signingConfigs.release
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation "com.facebook.react:react-native"
+    implementation "androidx.appcompat:appcompat:1.6.1"
+
+    debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
+    debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
+        exclude group:'com.squareup.okhttp3', module:'okhttp'
+    }
+
+    debugImplementation("com.facebook.flipper:flipper-fresco-driver:${FLIPPER_VERSION}")
+}
+
+// React Native Gradle Plugin
+react {
+    jsBundleDirRelease = "$buildDir/generated/assets/react/release"
+    resourcesDirRelease = "$buildDir/generated/res/react/release"
+    devDisabledInRelease = true
+    hermesEnabled = true
+}
+def enableProguardInReleaseBuilds = false
+def FLIPPER_VERSION = "0.212.1" 

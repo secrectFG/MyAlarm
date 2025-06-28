@@ -12,11 +12,14 @@ import {
 import AlarmClock from "./components/AlarmClock";
 import AlarmList from "./components/AlarmList";
 import AddAlarmModal from "./components/AddAlarmModal";
+import NotificationService from "./services/NotificationService";
 
 const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [alarms, setAlarms] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [notificationPermission, setNotificationPermission] =
+    useState("default");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -24,6 +27,16 @@ const App = () => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  // 初始化通知服务
+  useEffect(() => {
+    const initNotifications = async () => {
+      const permission = await NotificationService.requestPermission();
+      setNotificationPermission(permission);
+    };
+
+    initNotifications();
   }, []);
 
   // 检查闹钟是否到时
@@ -85,7 +98,30 @@ const App = () => {
             const alertMessage = alarm.isSpecificDate
               ? `指定日期闹钟响了！${alarm.label}`
               : `闹钟响了！${alarm.label}`;
+
+            // 显示Alert对话框
             Alert.alert("闹钟提醒", alertMessage);
+
+            // 同时显示系统通知
+            const notificationTitle = "⏰ 闹钟提醒";
+            const notificationBody = alarm.isSpecificDate
+              ? `指定日期闹钟：${alarm.label} (${alarm.time})`
+              : `重复闹钟：${alarm.label} (${alarm.time})`;
+
+            NotificationService.showNotification(
+              notificationTitle,
+              notificationBody,
+              {
+                icon: "/favicon.ico",
+                badge: "/favicon.ico",
+                actions: [
+                  {
+                    action: "dismiss",
+                    title: "关闭",
+                  },
+                ],
+              }
+            );
           }
         }
       });
@@ -152,11 +188,36 @@ const App = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF8E1" />
 
       {/* 标题栏 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>我的闹钟</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>我的闹钟</Text>
+          {notificationPermission !== "granted" && (
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={async () => {
+                if (NotificationService.isSupported()) {
+                  const permission =
+                    await NotificationService.requestPermission();
+                  setNotificationPermission(permission);
+                  if (permission === "granted") {
+                    Alert.alert("成功", "通知权限已获得！");
+                  } else {
+                    Alert.alert("提示", "请在浏览器设置中允许通知权限");
+                  }
+                } else {
+                  Alert.alert("提示", "您的设备不支持通知功能");
+                }
+              }}
+            >
+              <Text style={styles.notificationButtonText}>
+                {notificationPermission === "denied" ? "🔕" : "🔔"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
@@ -190,7 +251,7 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a2e",
+    backgroundColor: "#FFF8E1",
   },
   header: {
     flexDirection: "row",
@@ -199,17 +260,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: "#16213e",
+    backgroundColor: "#FFE082",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: "#333333",
+  },
+  notificationButton: {
+    marginLeft: 15,
+    width: 32,
+    height: 32,
+    backgroundColor: "#FF9800",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notificationButtonText: {
+    fontSize: 16,
   },
   addButton: {
     width: 40,
     height: 40,
-    backgroundColor: "#0f4c75",
+    backgroundColor: "#F57C00",
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",

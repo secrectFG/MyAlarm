@@ -170,3 +170,5 @@ Desktop.ini
 !assets/sounds/*.mp3
 !assets/sounds/*.wav
 !assets/sounds/*.m4a
+*.zip
+*.keystore

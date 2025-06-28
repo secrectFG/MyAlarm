@@ -1,5 +1,6 @@
-const path = require('path');
-const webpack = require('webpack');
+const path = require("path");
+const webpack = require("webpack");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 const appDirectory = path.resolve(__dirname);
 
@@ -12,33 +13,29 @@ const babelLoaderConfiguration = {
   test: /\.js$/,
   // Add every directory that needs to be compiled by Babel during the build.
   include: [
-    path.resolve(appDirectory, 'index.web.js'),
-    path.resolve(appDirectory, 'src'),
-    path.resolve(appDirectory, 'App.js'),
-    path.resolve(appDirectory, 'node_modules/react-native-uncompiled')
+    path.resolve(appDirectory, "index.web.js"),
+    path.resolve(appDirectory, "src"),
+    path.resolve(appDirectory, "App.js"),
+    path.resolve(appDirectory, "node_modules/react-native-uncompiled"),
   ],
   use: {
-    loader: 'babel-loader',
+    loader: "babel-loader",
     options: {
       cacheDirectory: true,
-      // The 'metro-react-native-babel-preset' preset is recommended to match React Native's packager
-      presets: ['module:metro-react-native-babel-preset'],
-      // Re-write paths to import only the modules needed by the app
-      plugins: ['react-native-web/babel', 'react-native-reanimated/plugin'],
-    }
-  }
+    },
+  },
 };
 
 // This is needed for webpack to import static images in JavaScript files.
 const imageLoaderConfiguration = {
   test: /\.(gif|jpe?g|png|svg)$/,
   use: {
-    loader: 'url-loader',
+    loader: "url-loader",
     options: {
-      name: '[name].[ext]',
+      name: "[name].[ext]",
       esModule: false,
-    }
-  }
+    },
+  },
 };
 
 module.exports = {
@@ -46,32 +43,38 @@ module.exports = {
     // load any web API polyfills
     // path.resolve(appDirectory, 'polyfills-web.js'),
     // your web-specific entry file
-    path.resolve(appDirectory, 'src/index.js'),
+    path.resolve(appDirectory, "src/index.js"),
   ],
 
   // configures where the build ends up
   output: {
-    filename: 'bundle.web.js',
-    path: path.resolve(appDirectory, 'dist'),
+    filename: "static/js/[name].[contenthash:8].js",
+    path: path.resolve(appDirectory, "android/app/src/main/assets"),
+    publicPath: "/",
+    clean: true, // Clean the output directory before emit.
   },
 
-  // ...the rest of your config
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: path.resolve(appDirectory, "public/index.html"),
+      filename: "index.html",
+    }),
+  ],
 
   module: {
-    rules: [
-      babelLoaderConfiguration,
-      imageLoaderConfiguration,
-    ]
+    rules: [babelLoaderConfiguration, imageLoaderConfiguration],
   },
 
   resolve: {
     // This will only alias the exact import "react-native"
     alias: {
-      'react-native$': 'react-native-web'
+      "react-native$": "react-native-web",
     },
     // If you're working on a multi-platform React Native app, web-specific
     // module implementations should be written in files using the extension
     // `.web.js`.
-    extensions: [ '.web.js', '.js' ]
+    extensions: [".web.js", ".js"],
   },
-}; 
+
+  mode: "production",
+};

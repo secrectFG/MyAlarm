@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     paddingVertical: 30,
-    backgroundColor: "#1a1a2e",
+    backgroundColor: "#FFC107",
   },
   timeContainer: {
     flexDirection: "row",
@@ -47,18 +47,18 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 60,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: "#333333",
     fontFamily: "monospace",
   },
   secondsText: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#bbbbbb",
+    color: "#666666",
     fontFamily: "monospace",
   },
   dateText: {
     fontSize: 16,
-    color: "#bbbbbb",
+    color: "#555555",
     marginTop: 10,
   },
 });
