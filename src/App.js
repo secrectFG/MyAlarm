@@ -8,7 +8,7 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import notifee, { TriggerType, TimestampTrigger } from '@notifee/react-native';
+import notifee, { TriggerType, EventType } from '@notifee/react-native';
 
 import AlarmClock from './components/AlarmClock';
 import AlarmList from './components/AlarmList';
@@ -18,6 +18,7 @@ const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [alarms, setAlarms] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingAlarm, setEditingAlarm] = useState(null);
 
   // 1. 应用启动时请求权限
   useEffect(() => {
@@ -43,9 +44,10 @@ const App = () => {
       const channelId = await notifee.createChannel({
         id: 'alarms',
         name: 'Alarms Channel',
-        sound: 'default',
+        sound: 'alarm', // 尝试使用系统闹钟声音
         vibration: true,
-        vibrationPattern: [300, 500],
+        vibrationPattern: [1000, 2000, 1000, 2000], // 修正为偶数个正数
+        importance: 4, // IMPORTANCE_HIGH
       });
 
       const now = new Date();
@@ -77,8 +79,25 @@ const App = () => {
               id: 'default',
               launchActivity: 'default',
             },
+            actions: [
+              {
+                title: '关闭闹钟',
+                pressAction: {
+                  id: 'dismiss',
+                },
+              },
+            ],
             // 立即显示（即使在免打扰模式下）
-            importance: notifee.AndroidImportance.HIGH,
+            importance: 4, // IMPORTANCE_HIGH
+            category: 'alarm',
+            fullScreenAction: {
+              id: 'default',
+              launchActivity: 'default',
+            },
+            autoCancel: false,
+            ongoing: true,
+            sound: 'alarm', // 明确指定闹钟声音
+            vibrationPattern: [1000, 500, 1000, 500, 1000, 500], // 修正为偶数个正数
           },
         },
         trigger,
@@ -114,6 +133,99 @@ const App = () => {
     setShowAddModal(false);
   };
 
+  const handleEdit = alarm => {
+    setEditingAlarm(alarm);
+    setShowAddModal(true);
+  };
+
+  const saveEditedAlarm = async editedAlarm => {
+    // First, cancel the old notification before making changes
+    await cancelNotification(editedAlarm.id);
+
+    const newAlarms = alarms.map(alarm =>
+      alarm.id === editedAlarm.id ? editedAlarm : alarm,
+    );
+    setAlarms(newAlarms);
+
+    // If the alarm is active, schedule a new notification
+    if (editedAlarm.isActive) {
+      await scheduleNotification(editedAlarm);
+    }
+
+    setEditingAlarm(null);
+    setShowAddModal(false);
+  };
+
+  const handleModalClose = () => {
+    setEditingAlarm(null);
+    setShowAddModal(false);
+  };
+
+  // 测试通知功能 - 真正的闹钟测试
+  const testNotification = async () => {
+    try {
+      const channelId = await notifee.createChannel({
+        id: 'test',
+        name: 'Test Channel',
+        sound: 'alarm',
+        vibration: true,
+        vibrationPattern: [1000, 2000, 1000, 2000], // 修正为偶数个正数
+        importance: 4, // IMPORTANCE_HIGH
+      });
+
+      // 创建一个2秒后触发的闹钟测试
+      const testTime = new Date(Date.now() + 2000); // 2秒后
+
+      const trigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: testTime.getTime(),
+      };
+
+      await notifee.createTriggerNotification(
+        {
+          id: 'test-alarm-notification',
+          title: '🔔 测试闹钟响了！',
+          body: '这是2秒后的闹钟测试，应该会响铃和震动！',
+          android: {
+            channelId,
+            pressAction: {
+              id: 'default',
+              launchActivity: 'default',
+            },
+            actions: [
+              {
+                title: '关闭测试闹钟',
+                pressAction: {
+                  id: 'dismiss-test',
+                },
+              },
+            ],
+            importance: 4,
+            category: 'alarm',
+            fullScreenAction: {
+              id: 'default',
+              launchActivity: 'default',
+            },
+            autoCancel: false,
+            ongoing: true,
+            sound: 'alarm',
+            vibrationPattern: [1000, 500, 1000, 500], // 修正为偶数个正数
+          },
+        },
+        trigger,
+      );
+
+      Alert.alert(
+        '测试闹钟已设置',
+        '2秒后将触发闹钟，请注意听声音和感受震动！',
+      );
+      console.log('Test alarm scheduled for:', testTime);
+    } catch (error) {
+      console.error('测试通知失败:', error);
+      Alert.alert('错误', '测试通知发送失败: ' + error.message);
+    }
+  };
+
   const toggleAlarm = id => {
     let toggledAlarm;
     const newAlarms = alarms.map(alarm => {
@@ -143,11 +255,11 @@ const App = () => {
 
   //  (跳过和取消跳过功能暂时简化，因为它们需要更复杂的调度逻辑)
   const skipTodayAlarm = id => {
-    Alert.alert('提示', '此功能正在使用新的通知服务重构中。');
+    Alert.alert('提示', '此功能正在开发中。');
   };
 
   const cancelSkipToday = id => {
-    Alert.alert('提示', '此功能正在使用新的通知服务重构中。');
+    Alert.alert('提示', '此功能正在开发中。');
   };
 
   return (
@@ -159,12 +271,20 @@ const App = () => {
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>我的闹钟</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={testNotification}
+          >
+            <Text style={styles.testButtonText}>测试</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 当前时间显示 */}
@@ -177,13 +297,16 @@ const App = () => {
         onDelete={deleteAlarm}
         onSkipToday={skipTodayAlarm}
         onCancelSkipToday={cancelSkipToday}
+        onEdit={handleEdit}
       />
 
       {/* 添加闹钟模态框 */}
       <AddAlarmModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={handleModalClose}
         onAdd={addAlarm}
+        alarmToEdit={editingAlarm}
+        onEdit={saveEditedAlarm}
       />
     </View>
   );
@@ -199,42 +322,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#FFE082',
+    paddingVertical: 15,
+    backgroundColor: '#FFD54F',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFC107',
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333333',
   },
-  notificationButton: {
-    marginLeft: 15,
-    width: 32,
-    height: 32,
-    backgroundColor: '#FF9800',
-    borderRadius: 16,
-    justifyContent: 'center',
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  notificationButtonText: {
-    fontSize: 16,
+  testButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  testButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   addButton: {
+    backgroundColor: '#FF9800',
     width: 40,
     height: 40,
-    backgroundColor: '#F57C00',
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButtonText: {
-    fontSize: 24,
     color: '#ffffff',
+    fontSize: 24,
     fontWeight: 'bold',
   },
 });
