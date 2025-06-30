@@ -1,107 +1,97 @@
-# 我的闹钟 (MyAlarm)
+This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
-一个简单的 React Native 闹钟应用。
+# Getting Started
 
-## 功能特性
+> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
-- ✅ 实时时钟显示
-- ✅ 添加自定义闹钟
-- ✅ 设置闹钟标签
-- ✅ 选择重复日期或指定日期
-- ✅ 今日跳过功能（重复闹钟）
-- ✅ 开启/关闭闹钟
-- ✅ 删除闹钟
-- ✅ 系统通知提醒
-- ✅ 跨平台支持（Web/Android/iOS）
-- ✅ 美观的深色主题界面
+## Step 1: Start Metro
 
-## 安装和运行
+First, you will need to run **Metro**, the JavaScript build tool for React Native.
 
-1. 安装依赖：
+To start the Metro dev server, run the following command from the root of your React Native project:
 
-```bash
-yarn install
+```sh
+# Using npm
+npm start
+
+# OR using Yarn
+yarn start
 ```
 
-2. 运行项目：
+## Step 2: Build and run your app
 
-### 📱 移动设备/模拟器
+With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
 
-对于 Android：
+### Android
 
-```bash
+```sh
+# Using npm
+npm run android
+
+# OR using Yarn
 yarn android
 ```
 
-对于 iOS：
+### iOS
 
-```bash
+For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+
+The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+
+```sh
+bundle install
+```
+
+Then, and every time you update your native dependencies, run:
+
+```sh
+bundle exec pod install
+```
+
+For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+
+```sh
+# Using npm
+npm run ios
+
+# OR using Yarn
 yarn ios
 ```
 
-### 💻 PC 浏览器测试
+If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
 
-在浏览器中运行（React Native Web）：
+This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
-```bash
-yarn web
-```
+## Step 3: Modify your app
 
-然后在浏览器中打开 `http://localhost:3000`
+Now that you have successfully run the app, let's make changes!
 
-### 🔧 Android 模拟器设置
+Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
 
-1. 下载安装 [Android Studio](https://developer.android.com/studio)
-2. 打开 Android Studio > More Actions > Virtual Device Manager
-3. 创建并启动一个 Android 虚拟设备
-4. 运行 `yarn android`
+When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
 
-## 项目结构
+- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
+- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
 
-```
-MyAlarm/
-├── App.js                    # 主应用组件
-├── src/
-│   └── components/
-│       ├── AlarmClock.js     # 时钟显示组件
-│       ├── AlarmList.js      # 闹钟列表组件
-│       └── AddAlarmModal.js  # 添加闹钟模态框
-├── package.json
-└── README.md
-```
+## Congratulations! :tada:
 
-## 使用说明
+You've successfully run and modified your React Native App. :partying_face:
 
-1. 打开应用后可以看到当前时间
-2. 点击右上角的 "+" 按钮添加新闹钟
-3. 设置时间、标签
-4. 选择"重复"模式设置重复日期，或选择"指定日期"设置具体日期
-5. 在闹钟列表中可以开启/关闭、今日跳过或删除闹钟
-6. 闹钟到时会同时显示应用内提醒和系统通知
+### Now what?
 
-## 通知功能
+- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
+- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
-### 🌐 Web 版本
+# Troubleshooting
 
-- 首次使用时会请求通知权限
-- 支持浏览器原生通知
-- 可在系统通知栏中查看闹钟提醒
+If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
 
-### 📱 Android 版本
+# Learn More
 
-- 支持本地推送通知
-- 在 Android 通知界面显示闹钟信息
-- 支持振动和声音提醒
-- 适配 Android 8.0+通知通道
+To learn more about React Native, take a look at the following resources:
 
-### 🍎 iOS 版本
-
-- 支持本地推送通知
-- 在 iOS 通知中心显示
-- 支持声音和横幅提醒
-
-## 技术栈
-
-- React Native 0.80.0
-- React 18.2.0
-- JavaScript (ES6+)
+- [React Native Website](https://reactnative.dev) - learn more about React Native.
+- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
+- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
+- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
+- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,19 +7,25 @@ import {
   FlatList,
   Alert,
   StatusBar,
-} from "react-native";
+} from 'react-native';
+import notifee, { TriggerType, TimestampTrigger } from '@notifee/react-native';
 
-import AlarmClock from "./components/AlarmClock";
-import AlarmList from "./components/AlarmList";
-import AddAlarmModal from "./components/AddAlarmModal";
-import NotificationService from "./services/NotificationService";
+import AlarmClock from './components/AlarmClock';
+import AlarmList from './components/AlarmList';
+import AddAlarmModal from './components/AddAlarmModal';
 
 const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [alarms, setAlarms] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [notificationPermission, setNotificationPermission] =
-    useState("default");
+
+  // 1. 应用启动时请求权限
+  useEffect(() => {
+    const requestPermission = async () => {
+      await notifee.requestPermission();
+    };
+    requestPermission();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -29,161 +35,119 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 初始化通知服务
-  useEffect(() => {
-    const initNotifications = async () => {
-      const permission = await NotificationService.requestPermission();
-      setNotificationPermission(permission);
-    };
+  // 2. 创建一个函数来调度通知
+  const scheduleNotification = async alarm => {
+    if (!alarm.isActive) return;
 
-    initNotifications();
-  }, []);
-
-  // 检查闹钟是否到时
-  useEffect(() => {
-    const checkAlarms = () => {
-      const now = new Date();
-      const currentTimeString = `${now
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-      const currentDateString = now.toISOString().split("T")[0];
-
-      alarms.forEach((alarm) => {
-        if (
-          alarm.isActive &&
-          alarm.time === currentTimeString &&
-          now.getSeconds() === 0
-        ) {
-          let shouldTrigger = false;
-
-          if (alarm.isSpecificDate && alarm.specificDate) {
-            // 指定日期闹钟：只在指定日期触发
-            if (alarm.specificDate === currentDateString) {
-              shouldTrigger = true;
-              // 指定日期闹钟触发后自动删除
-              setAlarms((prevAlarms) =>
-                prevAlarms.filter((a) => a.id !== alarm.id)
-              );
-            }
-          } else if (alarm.repeat && alarm.repeat.length > 0) {
-            // 重复闹钟：检查是否在重复日期中
-            const weekDayNames = [
-              "周日",
-              "周一",
-              "周二",
-              "周三",
-              "周四",
-              "周五",
-              "周六",
-            ];
-            const currentWeekDay = weekDayNames[now.getDay()];
-
-            // 检查今天是否被跳过
-            const skippedDates = alarm.skippedDates || [];
-            const isTodaySkipped = skippedDates.includes(currentDateString);
-
-            if (alarm.repeat.includes(currentWeekDay) && !isTodaySkipped) {
-              shouldTrigger = true;
-              // 重复闹钟不删除，只是关闭
-              setAlarms((prevAlarms) =>
-                prevAlarms.map((a) =>
-                  a.id === alarm.id ? { ...a, isActive: false } : a
-                )
-              );
-            }
-          }
-
-          if (shouldTrigger) {
-            const alertMessage = alarm.isSpecificDate
-              ? `指定日期闹钟响了！${alarm.label}`
-              : `闹钟响了！${alarm.label}`;
-
-            // 显示Alert对话框
-            Alert.alert("闹钟提醒", alertMessage);
-
-            // 同时显示系统通知
-            const notificationTitle = "⏰ 闹钟提醒";
-            const notificationBody = alarm.isSpecificDate
-              ? `指定日期闹钟：${alarm.label} (${alarm.time})`
-              : `重复闹钟：${alarm.label} (${alarm.time})`;
-
-            NotificationService.showNotification(
-              notificationTitle,
-              notificationBody,
-              {
-                icon: "/favicon.ico",
-                badge: "/favicon.ico",
-                actions: [
-                  {
-                    action: "dismiss",
-                    title: "关闭",
-                  },
-                ],
-              }
-            );
-          }
-        }
+    try {
+      const channelId = await notifee.createChannel({
+        id: 'alarms',
+        name: 'Alarms Channel',
+        sound: 'default',
+        vibration: true,
+        vibrationPattern: [300, 500],
       });
-    };
 
-    checkAlarms();
-  }, [currentTime, alarms]);
+      const now = new Date();
+      const [hour, minute] = alarm.time.split(':');
+      let alarmDate = new Date();
+      alarmDate.setHours(parseInt(hour, 10));
+      alarmDate.setMinutes(parseInt(minute, 10));
+      alarmDate.setSeconds(0);
+      alarmDate.setMilliseconds(0);
 
-  const addAlarm = (alarmData) => {
+      // 如果闹钟时间已过，则设置为明天
+      if (alarmDate.getTime() <= now.getTime()) {
+        alarmDate.setDate(alarmDate.getDate() + 1);
+      }
+
+      const trigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: alarmDate.getTime(),
+      };
+
+      await notifee.createTriggerNotification(
+        {
+          id: alarm.id,
+          title: '⏰ 闹钟提醒',
+          body: `${alarm.label || '该起床了！'} (${alarm.time})`,
+          android: {
+            channelId,
+            pressAction: {
+              id: 'default',
+              launchActivity: 'default',
+            },
+            // 立即显示（即使在免打扰模式下）
+            importance: notifee.AndroidImportance.HIGH,
+          },
+        },
+        trigger,
+      );
+
+      console.log(
+        `Notification scheduled for alarm ${alarm.id} at ${alarmDate}`,
+      );
+    } catch (e) {
+      console.error('Failed to schedule notification', e);
+    }
+  };
+
+  // 3. 创建一个函数来取消通知
+  const cancelNotification = async alarmId => {
+    try {
+      await notifee.cancelNotification(alarmId);
+      console.log(`Notification cancelled for alarm ${alarmId}`);
+    } catch (e) {
+      console.error('Failed to cancel notification', e);
+    }
+  };
+
+  const addAlarm = alarmData => {
     const newAlarm = {
       id: Date.now().toString(),
       ...alarmData,
       isActive: true,
     };
     setAlarms([...alarms, newAlarm]);
+    // 调度新闹钟
+    scheduleNotification(newAlarm);
     setShowAddModal(false);
   };
 
-  const toggleAlarm = (id) => {
-    setAlarms(
-      alarms.map((alarm) =>
-        alarm.id === id ? { ...alarm, isActive: !alarm.isActive } : alarm
-      )
-    );
+  const toggleAlarm = id => {
+    let toggledAlarm;
+    const newAlarms = alarms.map(alarm => {
+      if (alarm.id === id) {
+        toggledAlarm = { ...alarm, isActive: !alarm.isActive };
+        return toggledAlarm;
+      }
+      return alarm;
+    });
+    setAlarms(newAlarms);
+
+    // 根据状态调度或取消通知
+    if (toggledAlarm) {
+      if (toggledAlarm.isActive) {
+        scheduleNotification(toggledAlarm);
+      } else {
+        cancelNotification(toggledAlarm.id);
+      }
+    }
   };
 
-  const deleteAlarm = (id) => {
-    setAlarms(alarms.filter((alarm) => alarm.id !== id));
+  const deleteAlarm = id => {
+    setAlarms(alarms.filter(alarm => alarm.id !== id));
+    // 删除闹钟时取消通知
+    cancelNotification(id);
   };
 
-  const skipTodayAlarm = (id) => {
-    const today = new Date().toISOString().split("T")[0];
-    setAlarms(
-      alarms.map((alarm) => {
-        if (alarm.id === id) {
-          const skippedDates = alarm.skippedDates || [];
-          if (!skippedDates.includes(today)) {
-            return {
-              ...alarm,
-              skippedDates: [...skippedDates, today],
-            };
-          }
-        }
-        return alarm;
-      })
-    );
+  //  (跳过和取消跳过功能暂时简化，因为它们需要更复杂的调度逻辑)
+  const skipTodayAlarm = id => {
+    Alert.alert('提示', '此功能正在使用新的通知服务重构中。');
   };
 
-  const cancelSkipToday = (id) => {
-    const today = new Date().toISOString().split("T")[0];
-    setAlarms(
-      alarms.map((alarm) => {
-        if (alarm.id === id) {
-          const skippedDates = alarm.skippedDates || [];
-          return {
-            ...alarm,
-            skippedDates: skippedDates.filter((date) => date !== today),
-          };
-        }
-        return alarm;
-      })
-    );
+  const cancelSkipToday = id => {
+    Alert.alert('提示', '此功能正在使用新的通知服务重构中。');
   };
 
   return (
@@ -194,29 +158,6 @@ const App = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>我的闹钟</Text>
-          {notificationPermission !== "granted" && (
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={async () => {
-                if (NotificationService.isSupported()) {
-                  const permission =
-                    await NotificationService.requestPermission();
-                  setNotificationPermission(permission);
-                  if (permission === "granted") {
-                    Alert.alert("成功", "通知权限已获得！");
-                  } else {
-                    Alert.alert("提示", "请在浏览器设置中允许通知权限");
-                  }
-                } else {
-                  Alert.alert("提示", "您的设备不支持通知功能");
-                }
-              }}
-            >
-              <Text style={styles.notificationButtonText}>
-                {notificationPermission === "denied" ? "🔕" : "🔔"}
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
         <TouchableOpacity
           style={styles.addButton}
@@ -251,34 +192,34 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF8E1",
+    backgroundColor: '#FFF8E1',
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: "#FFE082",
+    backgroundColor: '#FFE082',
   },
   headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#333333",
+    fontWeight: 'bold',
+    color: '#333333',
   },
   notificationButton: {
     marginLeft: 15,
     width: 32,
     height: 32,
-    backgroundColor: "#FF9800",
+    backgroundColor: '#FF9800',
     borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationButtonText: {
     fontSize: 16,
@@ -286,15 +227,15 @@ const styles = StyleSheet.create({
   addButton: {
     width: 40,
     height: 40,
-    backgroundColor: "#F57C00",
+    backgroundColor: '#F57C00',
     borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButtonText: {
     fontSize: 24,
-    color: "#ffffff",
-    fontWeight: "bold",
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
 
